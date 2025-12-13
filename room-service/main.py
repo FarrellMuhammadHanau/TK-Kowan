@@ -51,7 +51,7 @@ def get_institution_id(
 # ---------- API ----------
 
 # CREATE ROOMS (BULK)
-@app.post("/rooms/create", response_model=CreateRoomsResponse)
+@app.post("/rooms", response_model=CreateRoomsResponse)
 async def create_rooms(
     data: CreateRoomsRequest,
     institution_id: str = Depends(get_institution_id),
