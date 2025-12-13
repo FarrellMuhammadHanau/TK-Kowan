@@ -3,9 +3,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from jose import jwt, JWTError
-from passlib.context import CryptContext
 import secrets
 import string
+import hashlib
 import os
 
 from db import SessionLocal, Attendee, init_db
@@ -22,7 +22,6 @@ JWT_SECRET = os.getenv("JWT_SECRET", "EfEmEitch123")
 JWT_ALGORITHM = "HS256"
 
 security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 app = FastAPI()
 
 # ---------- DB ----------
@@ -45,12 +44,12 @@ def get_institution_id(
             algorithms=[JWT_ALGORITHM]
         )
         
-        # VALIDASI ROLE ADMIN - TAMBAH INI
+        # Validasi role admin
         if payload.get("role") != "admin":
             raise HTTPException(status_code=403, detail="Admin access required")
         
         return payload["sub"]
-    except JWTError:  # GANTI Exception jadi JWTError biar lebih specific
+    except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # ---------- SECRET ----------
@@ -59,10 +58,10 @@ def generate_secret(length: int = 8) -> str:
     return "".join(secrets.choice(chars) for _ in range(length))
 
 def hash_secret(secret: str) -> str:
-    return pwd_context.hash(secret)
+    return hashlib.sha256(secret.encode()).hexdigest()
 
 def verify_secret(secret: str, secret_hash: str) -> bool:
-    return pwd_context.verify(secret, secret_hash)
+    return hash_secret(secret) == secret_hash
 
 # ---------- API ----------
 
