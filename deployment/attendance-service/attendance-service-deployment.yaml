@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: attendance-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attendance-service
+  template:
+    metadata:
+      labels:
+        app: attendance-service
+    spec:
+      containers:
+      - name: attendance-service
+        image: yodh4/attendance-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: postgresql+asyncpg://postgres:postgres@attendance-postgres:5432/attendance_service_db
+        - name: JWT_SECRET
+          value: EfEmEitch123
+        - name: ATTENDEE_SERVICE_URL
+          value: http://18.214.134.23:8000
+        - name: CLASS_SERVICE_URL
+          value: http://3.225.88.17:8000
+        - name: SCHEDULE_SERVICE_URL
+          value: http://35.171.134.244:8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: attendance-service
+spec:
+  selector:
+    app: attendance-service
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: LoadBalancer
