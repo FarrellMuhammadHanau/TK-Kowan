@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: schedule-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: schedule-service
+  template:
+    metadata:
+      labels:
+        app: schedule-service
+    spec:
+      containers:
+      - name: schedule-service
+        image: yodh4/schedule-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: postgresql+asyncpg://postgres:postgres@schedule-postgres:5432/schedule_service_db
+        - name: JWT_SECRET
+          value: EfEmEitch123
+        - name: ROOM_SERVICE_URL
+          value: http://54.162.202.203:8000
+        - name: CLASS_SERVICE_URL
+          value: http://3.225.88.17:8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: schedule-service
+spec:
+  selector:
+    app: schedule-service
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: LoadBalancer
