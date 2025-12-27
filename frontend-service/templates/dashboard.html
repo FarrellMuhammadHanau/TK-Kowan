@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-semibold">Dashboard</h2>
+    <a href="/logout" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+      Logout
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <a href="/attendees" class="block p-6 bg-blue-100 rounded-lg hover:bg-blue-200 transition">
+      <h3 class="text-xl font-semibold text-blue-800 mb-2">Attendees</h3>
+      <p class="text-gray-700">Manage attendees</p>
+    </a>
+
+    <a href="/rooms" class="block p-6 bg-green-100 rounded-lg hover:bg-green-200 transition">
+      <h3 class="text-xl font-semibold text-green-800 mb-2">Rooms</h3>
+      <p class="text-gray-700">Manage rooms</p>
+    </a>
+
+    <div class="block p-6 bg-gray-100 rounded-lg">
+      <h3 class="text-xl font-semibold text-gray-800 mb-2">Classes</h3>
+      <p class="text-gray-700">Coming soon</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
