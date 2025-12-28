@@ -23,6 +23,8 @@ spec:
           value: postgresql+asyncpg://postgres:postgres@attendance-postgres:5432/attendance_service_db
         - name: JWT_SECRET
           value: EfEmEitch123
+        - name: TIMEZONE
+          value: Asia/Jakarta
         - name: ATTENDEE_SERVICE_URL
           value: http://18.214.134.23:8000
         - name: CLASS_SERVICE_URL
