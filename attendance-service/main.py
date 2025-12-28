@@ -25,6 +25,7 @@ TIMEZONE = ZoneInfo(os.getenv("TIMEZONE", "Asia/Jakarta"))
 ATTENDEE_SERVICE_URL = os.getenv("ATTENDEE_SERVICE_URL", "http://18.214.134.23:8000")
 CLASS_SERVICE_URL = os.getenv("CLASS_SERVICE_URL", "http://3.225.88.17:8000")
 SCHEDULE_SERVICE_URL = os.getenv("SCHEDULE_SERVICE_URL", "http://35.171.134.244:8000")
+ROOM_SERVICE_URL = os.getenv("ROOM_SERVICE_URL", "http://54.162.202.203:8000")
 
 security = HTTPBearer()
 app = FastAPI()
@@ -65,11 +66,33 @@ async def get_credential(
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
+    # Fetch room name from room service
+    room_name = None
+    institution_name = payload.get("institution_name")  # Get from JWT (backward compatible)
+    
+    try:
+        internal_token = create_access_token({"sub": payload["sub"], "role": "admin"})
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{ROOM_SERVICE_URL}/rooms",
+                headers={"Authorization": f"Bearer {internal_token}"}
+            )
+            if resp.status_code == 200:
+                rooms = resp.json()
+                for room in rooms:
+                    if room["id"] == data.room_id:
+                        room_name = room["name"]
+                        break
+    except Exception as e:
+        print(f"Failed to fetch room name: {e}")
+    
     # Create a token for the attendance machine bound to specific room
     machine_payload = {
         "sub": payload["sub"],
         "role": "attendee",
-        "room": data.room_id  # Bind token to specific room
+        "room": data.room_id,
+        "room_name": room_name,  # (optional, backward compatible)
+        "institution_name": institution_name  # (optional, backward compatible)
     }
     token = create_access_token(machine_payload)
     return CredentialResponse(access_token=token)
@@ -94,13 +117,6 @@ async def submit_presence(
         raise HTTPException(status_code=400, detail="Token does not contain room information")
     
     # Admin Token (to reuse for inter-service calls)
-    # Since the machine token might not be accepted by other services if they check for "admin",
-    # We should ideally have an Admin token. 
-    # BUT, for simplicity in this system design, we assume services accept the JWT signed by the same secret.
-    # However, Attendee/Class/Schedule services specifically check for 'role': 'admin'.
-    # The 'attendance machine' token has role 'attendee'.
-    # To fix this: We need to sign a temporary ADMIN token here to talk to other services,
-    # Solution: We generate a short-lived admin token for internal calls.
     internal_token = create_access_token({"sub": institution_id, "role": "admin"})
     headers = {"Authorization": f"Bearer {internal_token}"}
 
@@ -122,20 +138,10 @@ async def submit_presence(
             raise HTTPException(status_code=503, detail="Attendee validation failed")
 
         # Validate Schedule (Schedule Service)
-        # We need to know 'current time'.
         now = datetime.now(TIMEZONE)
-        day = now.isoweekday() # 1=Mon, 7=Sun
+        day = now.isoweekday()
         time_int = int(now.strftime("%H%M"))
         
-        # Note: In real world, we might want to check a buffer (e.g., +/- 15 mins).
-        # For this simplified assignment, we assume the validate-availability endpoint checks existence.
-        # The Schedule Service 'validate-availability' checks for CONFLICTS (creation).
-        # It does NOT check "Is there a class NOW?".
-        # We need to query GET /schedules and filter locally, OR assume Schedule Service logic.
-        # validate-availability returns 'valid: false' if there IS a schedule (conflict).
-        # We want a schedule to exist.
-        
-        # fetch all schedules and filter.
         try:
             resp = await client.get(f"{SCHEDULE_SERVICE_URL}/schedules", headers=headers)
             resp.raise_for_status()
@@ -145,8 +151,6 @@ async def submit_presence(
             print(f"Room ID to match: {room_id}")
             print(f"Total schedules retrieved: {len(schedules)}")
             
-            # Find matching schedule
-            # Logic: Same Room, Same Day, Current Time is within Start-End
             active_schedule = None
             for s in schedules:
                 if s["room_id"] == room_id:

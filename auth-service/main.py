@@ -27,10 +27,11 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hash: str) -> bool:
     return hash_password(password) == hash
 
-def create_jwt(institution_id: str) -> str:
+def create_jwt(institution_id: str, institution_name: str) -> str:
     payload = {
         "sub": institution_id,
-        "role": "admin"
+        "role": "admin",
+        "institution_name": institution_name  # Tambah institution_name
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -67,5 +68,5 @@ async def login(
     if not inst or not verify_password(data.password, inst.password_hash):
         raise HTTPException(status_code=401, detail="invalid credentials")
 
-    token = create_jwt(inst.id)
+    token = create_jwt(inst.id, inst.name)  # Pass institution name
     return TokenResponse(access_token=token)
