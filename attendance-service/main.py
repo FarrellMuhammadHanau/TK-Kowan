@@ -22,7 +22,7 @@ JWT_ALGORITHM = "HS256"
 # SERVICE URLs (Default to Deployed Production IPs)
 ATTENDEE_SERVICE_URL = os.getenv("ATTENDEE_SERVICE_URL", "http://18.214.134.23:8000")
 CLASS_SERVICE_URL = os.getenv("CLASS_SERVICE_URL", "http://3.225.88.17:8000")
-SCHEDULE_SERVICE_URL = os.getenv("SCHEDULE_SERVICE_URL", "http://3.239.169.255:8000")
+SCHEDULE_SERVICE_URL = os.getenv("SCHEDULE_SERVICE_URL", "http://35.171.134.244:8000")
 
 security = HTTPBearer()
 app = FastAPI()
