@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-service
+  template:
+    metadata:
+      labels:
+        app: frontend-service
+    spec:
+      containers:
+      - name: frontend-service
+        image: frontend-service:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: AUTH_SERVICE_URL
+          value: "http://13.223.192.142:8000"
+        - name: ROOM_SERVICE_URL
+          value: "http://54.162.202.203:8000"
+        - name: CLASS_SERVICE_URL
+          value: "http://3.225.88.17:8000"
+        - name: ATTENDEE_SERVICE_URL
+          value: "http://18.214.134.23:8000"
+        - name: SCHEDULE_SERVICE_URL
+          value: "http://35.171.134.244:8000"
+        - name: ATTENDANCE_SERVICE_URL
+          value: "http://100.28.146.147:8000"
+        - name: JWT_SECRET
+          value: "EfEmEitch123"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend-service
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: LoadBalancer
