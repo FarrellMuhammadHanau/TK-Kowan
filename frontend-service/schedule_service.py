@@ -52,13 +52,42 @@ async def schedules_page(request: Request, jwt_token: str = Cookie(None)):
     )
 
 @router.get("/schedules/create")
-def create_schedule_page(request: Request, jwt_token: str = Cookie(None)):
+async def create_schedule_page(request: Request, jwt_token: str = Cookie(None)):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
+    classes = []
+    rooms = []
+    error = request.query_params.get("error")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # Fetch classes
+            class_res = await client.get(
+                f"{os.getenv('CLASS_SERVICE_URL', 'http://3.225.88.17:8000')}/classes",
+                headers={"Authorization": f"Bearer {jwt_token}"}
+            )
+            if class_res.status_code == 200:
+                classes = class_res.json()
+            
+            # Fetch rooms
+            room_res = await client.get(
+                f"{os.getenv('ROOM_SERVICE_URL', 'http://54.162.202.203:8000')}/rooms",
+                headers={"Authorization": f"Bearer {jwt_token}"}
+            )
+            if room_res.status_code == 200:
+                rooms = room_res.json()
+    except Exception:
+        traceback.print_exc()
+    
     return templates.TemplateResponse(
         "schedule_create.html",
-        {"request": request}
+        {
+            "request": request,
+            "classes": classes,
+            "rooms": rooms,
+            "error": error
+        }
     )
 
 @router.post("/schedules/create")

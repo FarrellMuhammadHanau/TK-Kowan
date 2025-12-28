@@ -6,26 +6,48 @@
   <h2 class="text-2xl font-semibold mb-6 text-center">Add New Schedule</h2>
 
   <form method="POST" action="/schedules/create" class="space-y-4">
+    {% if error %}
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <strong>Error!</strong> Failed to add schedule. Try again.
+    </div>
+    {% endif %}
+
     <div>
-      <label class="block text-sm font-medium mb-1">Class ID</label>
-      <input
-        type="text"
+      <label class="block text-sm font-medium mb-1">Class</label>
+      <select
         name="class_id"
-        placeholder="e.g. d55fd2ae-bcbf-4f41-9414-c676cb73cf5a"
-        class="w-full px-4 py-2 border rounded text-xs"
+        class="w-full px-4 py-2 border rounded"
         required
-      />
+      >
+        <option value="">Select Class</option>
+        {% for class in classes | sort(attribute='name') %}
+        <option value="{{ class.id }}">
+          {% if class.code and class.code != class.name %}{{ class.code }} - {% endif %}{{ class.name }}
+        </option>
+        {% endfor %}
+      </select>
+      {% if not classes %}
+      <p class="text-xs text-gray-500 mt-1">No classes available. <a href="/classes/create" class="text-blue-600 underline">Create one</a></p>
+      {% endif %}
     </div>
 
     <div>
-      <label class="block text-sm font-medium mb-1">Room ID</label>
-      <input
-        type="text"
+      <label class="block text-sm font-medium mb-1">Room</label>
+      <select
         name="room_id"
-        placeholder="e.g. 9ecaf219-7590-4673-98ff-f892480566e6"
-        class="w-full px-4 py-2 border rounded text-xs"
+        class="w-full px-4 py-2 border rounded"
         required
-      />
+      >
+        <option value="">Select Room</option>
+        {% for room in rooms | sort(attribute='name') %}
+        <option value="{{ room.id }}">
+          {% if room.code and room.code != room.name %}{{ room.code }} - {% endif %}{{ room.name }}
+        </option>
+        {% endfor %}
+      </select>
+      {% if not rooms %}
+      <p class="text-xs text-gray-500 mt-1">No rooms available. <a href="/rooms/create" class="text-blue-600 underline">Create one</a></p>
+      {% endif %}
     </div>
 
     <div>
@@ -80,9 +102,5 @@
       Cancel
     </a>
   </form>
-
-  {% if request.query_params.get('error') %}
-  <p class="text-red-500 text-sm mt-3 text-center">Failed to add schedule. Try again.</p>
-  {% endif %}
 </div>
 {% endblock %}
