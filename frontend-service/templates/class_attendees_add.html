@@ -2,26 +2,56 @@
 {% block title %}Add Attendee to Class{% endblock %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-lg shadow-md w-96">
+<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl">
   <h2 class="text-2xl font-semibold mb-6 text-center">Add Attendee to {{ class_name }}</h2>
 
   <form method="POST" action="/classes/{{ class_id }}/attendees/add" class="space-y-4">
-    {% if request.query_params.get('error') %}
+    {% if error %}
     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-      {{ request.query_params.get('error_msg', 'Failed to add attendee. Try again.') }}
+      {{ error_msg or 'Failed to add attendee. Try again.' }}
     </div>
     {% endif %}
 
     <div>
-      <label class="block text-sm font-medium mb-1">Attendee Code</label>
+      <label class="block text-sm font-medium mb-1">Search and Select Attendee</label>
       <input
         type="text"
+        id="searchInput"
+        placeholder="Search by name or code..."
+        class="w-full px-4 py-2 border rounded mb-2"
+        onkeyup="filterAttendees()"
+      />
+      
+      <select
+        id="attendeeSelect"
         name="attendee_code"
-        placeholder="e.g. 2106123456"
+        size="10"
         class="w-full px-4 py-2 border rounded"
         required
+        style="min-height: 250px;"
+      >
+        {% if available_attendees %}
+          {% for attendee in available_attendees | sort(attribute='name') %}
+          <option value="{{ attendee.code }}" class="attendee-option py-2 hover:bg-blue-100">
+            {{ attendee.name }} ({{ attendee.code }})
+          </option>
+          {% endfor %}
+        {% else %}
+          <option disabled>No attendees available</option>
+        {% endif %}
+      </select>
+      <p class="text-xs text-gray-500 mt-1">Search and click to select an attendee</p>
+    </div>
+
+    <div class="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+      <strong>Or enter code manually:</strong>
+      <input
+        type="text"
+        id="manualCode"
+        placeholder="e.g. 2106123456"
+        class="w-full px-4 py-2 border rounded mt-2"
+        onchange="selectManualCode()"
       />
-      <p class="text-xs text-gray-500 mt-1">Enter the attendee's NPM or code</p>
     </div>
 
     <button
@@ -39,4 +69,49 @@
     </a>
   </form>
 </div>
+
+<script>
+function filterAttendees() {
+  const input = document.getElementById('searchInput');
+  const filter = input.value.toLowerCase();
+  const select = document.getElementById('attendeeSelect');
+  const options = select.getElementsByTagName('option');
+
+  for (let i = 0; i < options.length; i++) {
+    const text = options[i].textContent || options[i].innerText;
+    if (text.toLowerCase().indexOf(filter) > -1) {
+      options[i].style.display = "";
+    } else {
+      options[i].style.display = "none";
+    }
+  }
+}
+
+function selectManualCode() {
+  const manualInput = document.getElementById('manualCode');
+  const select = document.getElementById('attendeeSelect');
+  const code = manualInput.value.trim();
+  
+  if (code) {
+    // Check if code exists in the select options
+    let found = false;
+    for (let i = 0; i < select.options.length; i++) {
+      if (select.options[i].value === code) {
+        select.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    
+    // If not found, create a temporary option
+    if (!found) {
+      const option = document.createElement('option');
+      option.value = code;
+      option.text = code + ' (Manual Entry)';
+      option.selected = true;
+      select.add(option);
+    }
+  }
+}
+</script>
 {% endblock %}
