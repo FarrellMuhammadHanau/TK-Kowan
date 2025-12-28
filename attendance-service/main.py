@@ -6,6 +6,7 @@ from jose import jwt, JWTError
 import os
 import httpx
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from db import SessionLocal, Attendance, init_db
 from schemas import (
@@ -18,6 +19,7 @@ from schemas import (
 # CONFIG
 JWT_SECRET = os.getenv("JWT_SECRET", "EfEmEitch123")
 JWT_ALGORITHM = "HS256"
+TIMEZONE = ZoneInfo(os.getenv("TIMEZONE", "Asia/Jakarta"))
 
 # SERVICE URLs (Default to Deployed Production IPs)
 ATTENDEE_SERVICE_URL = os.getenv("ATTENDEE_SERVICE_URL", "http://18.214.134.23:8000")
@@ -121,7 +123,7 @@ async def submit_presence(
 
         # Validate Schedule (Schedule Service)
         # We need to know 'current time'.
-        now = datetime.now()
+        now = datetime.now(TIMEZONE)
         day = now.isoweekday() # 1=Mon, 7=Sun
         time_int = int(now.strftime("%H%M"))
         
@@ -136,12 +138,20 @@ async def submit_presence(
         # fetch all schedules and filter.
         try:
             resp = await client.get(f"{SCHEDULE_SERVICE_URL}/schedules", headers=headers)
+            resp.raise_for_status()
             schedules = resp.json().get("schedules", [])
+            
+            print(f"Current time: {now} (Day {day}, Time {time_int})")
+            print(f"Room ID to match: {room_id}")
+            print(f"Total schedules retrieved: {len(schedules)}")
             
             # Find matching schedule
             # Logic: Same Room, Same Day, Current Time is within Start-End
             active_schedule = None
             for s in schedules:
+                if s["room_id"] == room_id:
+                    print(f"Found schedule for this room: Day {s['day']}, {s['start_time']}-{s['end_time']}")
+                
                 if (s["room_id"] == room_id and 
                     s["day"] == day and 
                     s["start_time"] <= time_int <= s["end_time"]):
@@ -149,8 +159,14 @@ async def submit_presence(
                     break
             
             if not active_schedule:
-                raise HTTPException(status_code=400, detail="No class scheduled in this room right now")
+                print(f"No matching schedule found. Looking for: room={room_id}, day={day}, time={time_int}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"No class scheduled in this room right now (Day {day}, Time {time_int})"
+                )
                 
+        except HTTPException:
+            raise
         except Exception as e:
             print(f"Schedule Service Error: {e}")
             raise HTTPException(status_code=503, detail="Schedule validation failed")
