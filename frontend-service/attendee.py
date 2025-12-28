@@ -87,3 +87,39 @@ async def create_attendee_submit(
             )
     except Exception:
         return RedirectResponse(url="/attendees/create?error=1", status_code=302)
+
+# Delete attendee (POST)
+@router.post("/attendees/{attendee_code}/delete")
+async def delete_attendee(
+    attendee_code: str,
+    jwt_token: str = Cookie(None)
+):
+    if not check_auth(jwt_token):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.delete(
+                f"{ATTENDEE_SERVICE_URL}/attendees/{attendee_code}",
+                headers={"Authorization": f"Bearer {jwt_token}"}
+            )
+            
+            if res.status_code not in [200, 204]:
+                try:
+                    error_detail = res.json().get("detail", "Failed to delete attendee")
+                except:
+                    error_detail = "Failed to delete attendee"
+                return RedirectResponse(
+                    url=f"/attendees?error={error_detail}",
+                    status_code=302
+                )
+            
+            return RedirectResponse(
+                url="/attendees?success=Attendee%20deleted%20successfully",
+                status_code=302
+            )
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/attendees?error=Failed%20to%20delete%20attendee: {str(e)}",
+            status_code=302
+        )

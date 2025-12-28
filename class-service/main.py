@@ -374,3 +374,40 @@ async def validate_class_existence(
             for c in found
         ]
     )
+
+# 8. DELETE CLASS
+@app.delete("/classes/{class_id}")
+async def delete_class(
+    class_id: str,
+    institution_id: str = Depends(get_institution_id),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify class exists and belongs to institution
+    result = await db.execute(
+        select(Class).where(
+            Class.id == class_id,
+            Class.institution_id == institution_id
+        )
+    )
+    class_obj = result.scalar_one_or_none()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Delete all class-attendee relationships first
+    await db.execute(
+        select(ClassAttendee).where(
+            ClassAttendee.class_id == class_id
+        )
+    )
+    from sqlalchemy import delete as sql_delete
+    await db.execute(
+        sql_delete(ClassAttendee).where(
+            ClassAttendee.class_id == class_id
+        )
+    )
+    
+    # Delete the class
+    await db.delete(class_obj)
+    await db.commit()
+    
+    return {"message": "Class deleted successfully"}

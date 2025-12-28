@@ -96,6 +96,30 @@ async def validate_external_id(
 
 # ---------- API ----------
 
+# 5. DELETE SCHEDULE
+@app.delete("/schedules/{schedule_id}")
+async def delete_schedule(
+    schedule_id: str,
+    institution_id: str = Depends(get_institution_id),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify schedule exists and belongs to institution
+    result = await db.execute(
+        select(Schedule).where(
+            Schedule.id == schedule_id,
+            Schedule.institution_id == institution_id
+        )
+    )
+    schedule_obj = result.scalar_one_or_none()
+    if not schedule_obj:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    
+    # Delete the schedule
+    await db.delete(schedule_obj)
+    await db.commit()
+    
+    return {"message": "Schedule deleted successfully"}
+
 # 1. CREATE SCHEDULE
 @app.post("/schedules/create", response_model=CreateScheduleResponse)
 async def create_schedules(

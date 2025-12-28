@@ -8,7 +8,7 @@
   <form method="POST" action="/schedules/create" class="space-y-4">
     {% if error %}
     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-      <strong>Error!</strong> Failed to add schedule. Try again.
+      <strong>Error!</strong> {{ error }}
     </div>
     {% endif %}
 
