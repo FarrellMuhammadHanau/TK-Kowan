@@ -58,6 +58,21 @@ async def create_rooms(
     db: AsyncSession = Depends(get_db)
 ):
     for item in data.rooms:
+        # Check if room name already exists for this institution
+        result = await db.execute(
+            select(Room).where(
+                Room.institution_id == institution_id,
+                Room.room_name == item.name
+            )
+        )
+        existing_room = result.scalars().first()
+        
+        if existing_room:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Room '{item.name}' already exists"
+            )
+        
         room = Room(
             institution_id=institution_id,
             room_name=item.name
