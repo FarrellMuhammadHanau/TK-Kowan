@@ -101,7 +101,58 @@ async def get_classes(
         for c in classes
     ]
 
-# 3. ADD ATTENDEES TO CLASS
+# 3. GET ATTENDEES FOR A CLASS
+@app.get("/classes/{class_id}/attendees")
+async def get_class_attendees(
+    class_id: str,
+    institution_id: str = Depends(get_institution_id),
+    token: str = Depends(get_raw_token),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify class exists and belongs to institution
+    result = await db.execute(
+        select(Class).where(
+            Class.id == class_id,
+            Class.institution_id == institution_id
+        )
+    )
+    class_obj = result.scalar_one_or_none()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Get all attendee codes for this class
+    result = await db.execute(
+        select(ClassAttendee.attendee_code).where(
+            ClassAttendee.class_id == class_id,
+            ClassAttendee.institution_id == institution_id
+        )
+    )
+    attendee_codes = [row[0] for row in result.all()]
+    
+    if not attendee_codes:
+        return {"attendees": []}
+    
+    # Fetch attendee details from attendee service
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{ATTENDEE_SERVICE_URL}/attendees/validate-existence",
+                json={"attendees": [{"code": code} for code in attendee_codes]},
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            response.raise_for_status()
+            validation_data = response.json()
+            
+            if validation_data.get("valid"):
+                return {"attendees": validation_data.get("attendees", [])}
+            else:
+                # Even if validation fails, return the codes we have
+                return {"attendees": [{"code": code, "name": "Unknown"} for code in attendee_codes]}
+        except (httpx.RequestError, httpx.HTTPStatusError):
+            # If attendee service is unavailable, return codes only
+            return {"attendees": [{"code": code, "name": "Unknown"} for code in attendee_codes]}
+
+# 4. ADD ATTENDEES TO CLASS
 @app.post("/classes/add-attendees")
 async def add_attendees(
     data: AddAttendeesRequest,
@@ -164,7 +215,44 @@ async def add_attendees(
     await db.commit()
     return {"message": "successful"}
 
-# 4. VALIDATE ATTENDEE IN CLASS
+# 5. REMOVE ATTENDEE FROM CLASS
+@app.delete("/classes/{class_id}/attendees/{attendee_code}")
+async def remove_attendee(
+    class_id: str,
+    attendee_code: str,
+    institution_id: str = Depends(get_institution_id),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify class exists
+    result = await db.execute(
+        select(Class).where(
+            Class.id == class_id,
+            Class.institution_id == institution_id
+        )
+    )
+    class_obj = result.scalar_one_or_none()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Find and delete the class-attendee relationship
+    result = await db.execute(
+        select(ClassAttendee).where(
+            ClassAttendee.class_id == class_id,
+            ClassAttendee.attendee_code == attendee_code,
+            ClassAttendee.institution_id == institution_id
+        )
+    )
+    class_attendee = result.scalar_one_or_none()
+    
+    if not class_attendee:
+        raise HTTPException(status_code=404, detail="Attendee not found in this class")
+    
+    await db.delete(class_attendee)
+    await db.commit()
+    
+    return {"message": "Attendee removed successfully"}
+
+# 6. VALIDATE ATTENDEE IN CLASS
 @app.post("/classes/validate-attendee", response_model=ValidateAttendeeResponse)
 async def validate_attendee(
     data: ValidateAttendeeRequest,
@@ -194,7 +282,7 @@ async def validate_attendee(
         class_name=class_obj.name
     )
 
-# 5. VALIDATE CLASS EXISTENCE
+# 7. VALIDATE CLASS EXISTENCE
 @app.post("/classes/validate-existence", response_model=ValidateClassExistenceResponse)
 async def validate_class_existence(
     data: ValidateClassExistenceRequest,

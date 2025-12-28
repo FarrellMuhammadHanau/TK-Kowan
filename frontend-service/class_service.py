@@ -158,9 +158,11 @@ async def add_attendee_to_class_page(
         return RedirectResponse(url="/login", status_code=302)
     
     class_info = None
+    available_attendees = []
     
     try:
         async with httpx.AsyncClient() as client:
+            # Get class info
             res = await client.get(
                 f"{CLASS_SERVICE_URL}/classes",
                 headers={"Authorization": f"Bearer {jwt_token}"}
@@ -168,18 +170,32 @@ async def add_attendee_to_class_page(
             if res.status_code == 200:
                 classes = res.json()
                 class_info = next((c for c in classes if c["id"] == class_id), None)
+            
+            # Get all available attendees
+            attendees_res = await client.get(
+                f"{ATTENDEE_SERVICE_URL}/attendees",
+                headers={"Authorization": f"Bearer {jwt_token}"}
+            )
+            if attendees_res.status_code == 200:
+                available_attendees = attendees_res.json()
     except Exception:
         pass
     
     if not class_info:
         return RedirectResponse(url="/classes", status_code=302)
     
+    error = request.query_params.get("error")
+    error_msg = request.query_params.get("error_msg")
+    
     return templates.TemplateResponse(
         "class_attendees_add.html",
         {
             "request": request,
             "class_id": class_id,
-            "class_name": class_info.get("name", "")
+            "class_name": class_info.get("name", ""),
+            "available_attendees": available_attendees,
+            "error": error,
+            "error_msg": error_msg
         }
     )
 
@@ -243,7 +259,7 @@ async def remove_attendee_from_class(
             if res.status_code not in [200, 204]:
                 error_msg = res.json().get("detail", "Failed to remove attendee")
                 return RedirectResponse(
-                    url=f"/classes/{class_id}/attendees?error=1&error_msg={error_msg}",
+                    url=f"/classes/{class_id}/attendees?error={error_msg}",
                     status_code=302
                 )
             
@@ -254,6 +270,6 @@ async def remove_attendee_from_class(
     except Exception as e:
         print(f"Error removing attendee: {e}")
         return RedirectResponse(
-            url=f"/classes/{class_id}/attendees?error=1",
+            url=f"/classes/{class_id}/attendees?error=Failed%20to%20remove%20attendee",
             status_code=302
         )
