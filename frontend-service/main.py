@@ -11,7 +11,6 @@ from schedule_service import router as schedule_router
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# Include routers
 app.include_router(auth_router)
 app.include_router(attendee_router)
 app.include_router(room_router)

@@ -3,8 +3,9 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import httpx
 import os
+import traceback
 
-CLASS_SERVICE_URL = os.getenv("CLASS_SERVICE_URL", "http://localhost:8000")
+CLASS_SERVICE_URL = os.getenv("CLASS_SERVICE_URL", "http://3.225.88.17:8000")
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -60,21 +61,22 @@ def create_class_page(request: Request, jwt_token: str = Cookie(None)):
 @router.post("/classes/create")
 async def create_class_submit(
     jwt_token: str = Cookie(None),
-    name: str = Form(...),
-    grade: str = Form(...)
+    code: str = Form(...),
+    name: str = Form(...)
 ):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
+            payload = {"classes": [{"code": code, "name": name}]}
             res = await client.post(
-                f"{CLASS_SERVICE_URL}/classes",
+                f"{CLASS_SERVICE_URL}/classes/create",
                 headers={"Authorization": f"Bearer {jwt_token}"},
-                json={"classes": [{"name": name, "grade": grade}]}
+                json=payload
             )
             
-            if res.status_code != 200:
+            if res.status_code not in [200, 201]:
                 return RedirectResponse(url="/classes/create?error=1", status_code=302)
             
             return RedirectResponse(
@@ -82,4 +84,5 @@ async def create_class_submit(
                 status_code=302
             )
     except Exception:
+        traceback.print_exc()
         return RedirectResponse(url="/classes/create?error=1", status_code=302)

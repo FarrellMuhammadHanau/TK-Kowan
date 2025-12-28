@@ -1,55 +1,50 @@
 {% extends "base.html" %}
-{% block title %}Create Class{% endblock %}
+{% block title %}Add Class{% endblock %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-  <h2 class="text-2xl font-semibold mb-6">Create New Class</h2>
+<div class="bg-white p-8 rounded-lg shadow-md w-96">
+  <h2 class="text-2xl font-semibold mb-6 text-center">Add New Class</h2>
 
-  {% if request.query_params.get('error') %}
-  <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-    Failed to create class. Please try again.
-  </div>
-  {% endif %}
-
-  <form method="post" action="/classes/create">
-    <div class="mb-4">
-      <label for="name" class="block text-gray-700 font-semibold mb-2">Class Name</label>
+  <form method="POST" action="/classes/create" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Class Code</label>
       <input
         type="text"
-        id="name"
-        name="name"
-        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-        placeholder="e.g., Classroom A"
+        name="code"
+        placeholder="e.g. CS101"
+        class="w-full px-4 py-2 border rounded"
         required
       />
     </div>
 
-    <div class="mb-6">
-      <label for="grade" class="block text-gray-700 font-semibold mb-2">Grade</label>
-      <select
-        id="grade"
-        name="grade"
-        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+    <div>
+      <label class="block text-sm font-medium mb-1">Class Name</label>
+      <input
+        type="text"
+        name="name"
+        placeholder="e.g. Introduction to Programming"
+        class="w-full px-4 py-2 border rounded"
         required
-      >
-        <option value="">Select Grade</option>
-        <option value="TK-A">TK-A</option>
-        <option value="TK-B">TK-B</option>
-        <option value="TK-C">TK-C</option>
-        <option value="TK-D">TK-D</option>
-      </select>
+      />
     </div>
 
     <button
       type="submit"
-      class="w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded hover:bg-blue-700"
+      class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
     >
-      Create Class
+      Add Class
     </button>
 
-    <a href="/classes" class="block mt-4 text-center text-gray-600 hover:text-gray-800">
-      Back to Classes
+    <a
+      href="/classes"
+      class="block text-center w-full bg-gray-600 text-white py-2 rounded hover:bg-gray-700"
+    >
+      Cancel
     </a>
   </form>
+
+  {% if request.query_params.get('error') %}
+  <p class="text-red-500 text-sm mt-3 text-center">Failed to add class. Try again.</p>
+  {% endif %}
 </div>
 {% endblock %}

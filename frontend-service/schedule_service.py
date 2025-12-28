@@ -3,8 +3,9 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 import httpx
 import os
+import traceback
 
-SCHEDULE_SERVICE_URL = os.getenv("SCHEDULE_SERVICE_URL", "http://localhost:8000")
+SCHEDULE_SERVICE_URL = os.getenv("SCHEDULE_SERVICE_URL", "http://35.171.134.244:8000")
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -29,8 +30,11 @@ async def schedules_page(request: Request, jwt_token: str = Cookie(None)):
             )
             
             if res.status_code == 200:
-                schedules = res.json()
+                data = res.json()
+                schedules = data if isinstance(data, list) else data.get("schedules", [])
+
     except Exception:
+        traceback.print_exc()
         error = "Gagal mengambil data schedule"
     
     success = request.query_params.get("success")
@@ -60,32 +64,37 @@ def create_schedule_page(request: Request, jwt_token: str = Cookie(None)):
 @router.post("/schedules/create")
 async def create_schedule_submit(
     jwt_token: str = Cookie(None),
-    class_id: int = Form(...),
-    room_id: int = Form(...),
+    class_id: str = Form(...),
+    room_id: str = Form(...),
     start_time: str = Form(...),
     end_time: str = Form(...),
-    day_of_week: str = Form(...)
+    day: int = Form(...)
 ):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
     try:
+        start_hhmm = int(start_time.replace(":", ""))
+        end_hhmm = int(end_time.replace(":", ""))
+        
         async with httpx.AsyncClient(timeout=10.0) as client:
+            payload = {
+                "schedules": [{
+                    "class_id": class_id,
+                    "room_id": room_id,
+                    "start_time": start_hhmm,
+                    "end_time": end_hhmm,
+                    "day": day
+                }]
+            }
+            
             res = await client.post(
-                f"{SCHEDULE_SERVICE_URL}/schedules",
+                f"{SCHEDULE_SERVICE_URL}/schedules/create",
                 headers={"Authorization": f"Bearer {jwt_token}"},
-                json={
-                    "schedules": [{
-                        "class_id": class_id,
-                        "room_id": room_id,
-                        "start_time": start_time,
-                        "end_time": end_time,
-                        "day_of_week": day_of_week
-                    }]
-                }
+                json=payload
             )
             
-            if res.status_code != 200:
+            if res.status_code not in [200, 201]:
                 return RedirectResponse(url="/schedules/create?error=1", status_code=302)
             
             return RedirectResponse(
@@ -93,4 +102,5 @@ async def create_schedule_submit(
                 status_code=302
             )
     except Exception:
+        traceback.print_exc()
         return RedirectResponse(url="/schedules/create?error=1", status_code=302)

@@ -1,90 +1,88 @@
 {% extends "base.html" %}
-{% block title %}Create Schedule{% endblock %}
+{% block title %}Add Schedule{% endblock %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-  <h2 class="text-2xl font-semibold mb-6">Create New Schedule</h2>
+<div class="bg-white p-8 rounded-lg shadow-md w-96">
+  <h2 class="text-2xl font-semibold mb-6 text-center">Add New Schedule</h2>
 
-  {% if request.query_params.get('error') %}
-  <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-    Failed to create schedule. Please try again.
-  </div>
-  {% endif %}
-
-  <form method="post" action="/schedules/create">
-    <div class="mb-4">
-      <label for="class_id" class="block text-gray-700 font-semibold mb-2">Class ID</label>
+  <form method="POST" action="/schedules/create" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Class ID</label>
       <input
-        type="number"
-        id="class_id"
+        type="text"
         name="class_id"
-        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-        placeholder="Enter class ID"
+        placeholder="e.g. d55fd2ae-bcbf-4f41-9414-c676cb73cf5a"
+        class="w-full px-4 py-2 border rounded text-xs"
         required
       />
     </div>
 
-    <div class="mb-4">
-      <label for="room_id" class="block text-gray-700 font-semibold mb-2">Room ID</label>
+    <div>
+      <label class="block text-sm font-medium mb-1">Room ID</label>
       <input
-        type="number"
-        id="room_id"
+        type="text"
         name="room_id"
-        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-        placeholder="Enter room ID"
+        placeholder="e.g. 9ecaf219-7590-4673-98ff-f892480566e6"
+        class="w-full px-4 py-2 border rounded text-xs"
         required
       />
     </div>
 
-    <div class="mb-4">
-      <label for="day_of_week" class="block text-gray-700 font-semibold mb-2">Day of Week</label>
+    <div>
+      <label class="block text-sm font-medium mb-1">Day of Week</label>
       <select
-        id="day_of_week"
-        name="day_of_week"
-        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+        name="day"
+        class="w-full px-4 py-2 border rounded"
         required
       >
         <option value="">Select Day</option>
-        <option value="Monday">Monday</option>
-        <option value="Tuesday">Tuesday</option>
-        <option value="Wednesday">Wednesday</option>
-        <option value="Thursday">Thursday</option>
-        <option value="Friday">Friday</option>
+        <option value="1">Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+        <option value="6">Saturday</option>
+        <option value="7">Sunday</option>
       </select>
     </div>
 
-    <div class="mb-4">
-      <label for="start_time" class="block text-gray-700 font-semibold mb-2">Start Time</label>
+    <div>
+      <label class="block text-sm font-medium mb-1">Start Time (HH:MM)</label>
       <input
         type="time"
-        id="start_time"
         name="start_time"
-        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+        class="w-full px-4 py-2 border rounded"
         required
       />
     </div>
 
-    <div class="mb-6">
-      <label for="end_time" class="block text-gray-700 font-semibold mb-2">End Time</label>
+    <div>
+      <label class="block text-sm font-medium mb-1">End Time (HH:MM)</label>
       <input
         type="time"
-        id="end_time"
         name="end_time"
-        class="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+        class="w-full px-4 py-2 border rounded"
         required
       />
     </div>
 
     <button
       type="submit"
-      class="w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded hover:bg-blue-700"
+      class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
     >
-      Create Schedule
+      Add Schedule
     </button>
 
-    <a href="/schedules" class="block mt-4 text-center text-gray-600 hover:text-gray-800">
-      Back to Schedules
+    <a
+      href="/schedules"
+      class="block text-center w-full bg-gray-600 text-white py-2 rounded hover:bg-gray-700"
+    >
+      Cancel
     </a>
   </form>
+
+  {% if request.query_params.get('error') %}
+  <p class="text-red-500 text-sm mt-3 text-center">Failed to add schedule. Try again.</p>
+  {% endif %}
 </div>
 {% endblock %}
