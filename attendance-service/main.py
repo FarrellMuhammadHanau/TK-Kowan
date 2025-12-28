@@ -9,6 +9,7 @@ from datetime import datetime
 
 from db import SessionLocal, Attendance, init_db
 from schemas import (
+    GetCredentialRequest,
     CredentialResponse,
     SubmitPresenceRequest,
     SubmitPresenceResponse
@@ -56,15 +57,17 @@ def get_raw_token(credentials: HTTPAuthorizationCredentials = Depends(security))
 # 1. GET CREDENTIAL (Admin Only)
 @app.post("/attendance/attendance-credential", response_model=CredentialResponse)
 async def get_credential(
+    data: GetCredentialRequest,
     payload: dict = Depends(get_current_institution)
 ):
     if payload.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    # Create a token for the attendance machine
+    # Create a token for the attendance machine bound to specific room
     machine_payload = {
         "sub": payload["sub"],
-        "role": "attendee" # Role for the machine
+        "role": "attendee",
+        "room": data.room_id  # Bind token to specific room
     }
     token = create_access_token(machine_payload)
     return CredentialResponse(access_token=token)
@@ -82,6 +85,11 @@ async def submit_presence(
         raise HTTPException(status_code=403, detail="Invalid role for submission")
         
     institution_id = payload["sub"]
+    
+    # Extract room_id from JWT token (not from request body)
+    room_id = payload.get("room")
+    if not room_id:
+        raise HTTPException(status_code=400, detail="Token does not contain room information")
     
     # Admin Token (to reuse for inter-service calls)
     # Since the machine token might not be accepted by other services if they check for "admin",
@@ -134,7 +142,7 @@ async def submit_presence(
             # Logic: Same Room, Same Day, Current Time is within Start-End
             active_schedule = None
             for s in schedules:
-                if (s["room_id"] == data.room_id and 
+                if (s["room_id"] == room_id and 
                     s["day"] == day and 
                     s["start_time"] <= time_int <= s["end_time"]):
                     active_schedule = s
