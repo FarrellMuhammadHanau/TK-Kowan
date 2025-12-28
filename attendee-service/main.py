@@ -178,3 +178,40 @@ async def validate_secret(
         code=attendee.code,
         name=attendee.name
     )
+
+# DELETE ATTENDEE
+@app.delete("/attendees/{attendee_code}")
+async def delete_attendee(
+    attendee_code: str,
+    institution_id: str = Depends(get_institution_id),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify attendee exists and belongs to institution
+    result = await db.execute(
+        select(Attendee).where(
+            Attendee.code == attendee_code,
+            Attendee.institution_id == institution_id
+        )
+    )
+    attendee_obj = result.scalar_one_or_none()
+    if not attendee_obj:
+        # Check if attendee exists in another institution
+        check_result = await db.execute(
+            select(Attendee).where(Attendee.code == attendee_code)
+        )
+        other_attendee = check_result.scalar_one_or_none()
+        if other_attendee:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Attendee {attendee_code} exists but belongs to a different institution"
+            )
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Attendee {attendee_code} not found"
+        )
+    
+    # Delete the attendee
+    await db.delete(attendee_obj)
+    await db.commit()
+    
+    return {"message": "Attendee deleted successfully"}

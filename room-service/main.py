@@ -85,6 +85,43 @@ async def get_rooms(
         for r in rooms
     ]
 
+# DELETE ROOM
+@app.delete("/rooms/{room_id}")
+async def delete_room(
+    room_id: str,
+    institution_id: str = Depends(get_institution_id),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify room exists and belongs to institution
+    result = await db.execute(
+        select(Room).where(
+            Room.id == room_id,
+            Room.institution_id == institution_id
+        )
+    )
+    room_obj = result.scalar_one_or_none()
+    if not room_obj:
+        # Check if room exists in another institution
+        check_result = await db.execute(
+            select(Room).where(Room.id == room_id)
+        )
+        other_room = check_result.scalar_one_or_none()
+        if other_room:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Room exists but belongs to a different institution"
+            )
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Room not found"
+        )
+    
+    # Delete the room
+    await db.delete(room_obj)
+    await db.commit()
+    
+    return {"message": "Room deleted successfully"}
+
 # VALIDATE EXISTENCE (BATCH)
 @app.post("/rooms/validate-existence", response_model=ValidateResponse)
 async def validate_existence(

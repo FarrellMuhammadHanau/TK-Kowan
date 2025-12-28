@@ -273,3 +273,37 @@ async def remove_attendee_from_class(
             url=f"/classes/{class_id}/attendees?error=Failed%20to%20remove%20attendee",
             status_code=302
         )
+
+# Delete class (POST)
+@router.post("/classes/{class_id}/delete")
+async def delete_class(
+    class_id: str,
+    jwt_token: str = Cookie(None)
+):
+    if not check_auth(jwt_token):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.delete(
+                f"{CLASS_SERVICE_URL}/classes/{class_id}",
+                headers={"Authorization": f"Bearer {jwt_token}"}
+            )
+            
+            if res.status_code not in [200, 204]:
+                error_msg = res.json().get("detail", "Failed to delete class")
+                return RedirectResponse(
+                    url=f"/classes?error={error_msg}",
+                    status_code=302
+                )
+            
+            return RedirectResponse(
+                url="/classes?success=Class%20deleted%20successfully",
+                status_code=302
+            )
+    except Exception as e:
+        print(f"Error deleting class: {e}")
+        return RedirectResponse(
+            url="/classes?error=Failed%20to%20delete%20class",
+            status_code=302
+        )

@@ -124,12 +124,51 @@ async def create_schedule_submit(
             )
             
             if res.status_code not in [200, 201]:
-                return RedirectResponse(url="/schedules/create?error=1", status_code=302)
+                try:
+                    error_detail = res.json().get("detail", "Failed to create schedule")
+                except:
+                    error_detail = f"Failed to create schedule (Status: {res.status_code})"
+                print(f"Schedule creation error: {error_detail}")
+                return RedirectResponse(url=f"/schedules/create?error={error_detail}", status_code=302)
             
             return RedirectResponse(
                 url=f"/schedules?success=1&schedule_name=Schedule",
                 status_code=302
             )
+    except Exception as e:
+        traceback.print_exc()
+        return RedirectResponse(url=f"/schedules/create?error=Error: {str(e)}", status_code=302)
+
+# Delete schedule (POST)
+@router.post("/schedules/{schedule_id}/delete")
+async def delete_schedule(
+    schedule_id: str,
+    jwt_token: str = Cookie(None)
+):
+    if not check_auth(jwt_token):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.delete(
+                f"{SCHEDULE_SERVICE_URL}/schedules/{schedule_id}",
+                headers={"Authorization": f"Bearer {jwt_token}"}
+            )
+            
+            if res.status_code not in [200, 204]:
+                error_msg = "Failed to delete schedule"
+                return RedirectResponse(
+                    url=f"/schedules?error={error_msg}",
+                    status_code=302
+                )
+            
+            return RedirectResponse(
+                url="/schedules?success=Schedule%20deleted%20successfully",
+                status_code=302
+            )
     except Exception:
         traceback.print_exc()
-        return RedirectResponse(url="/schedules/create?error=1", status_code=302)
+        return RedirectResponse(
+            url="/schedules?error=Failed%20to%20delete%20schedule",
+            status_code=302
+        )

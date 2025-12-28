@@ -84,6 +84,42 @@ async def create_room_submit(
     except Exception:
         return RedirectResponse(url="/rooms/create?error=1", status_code=302)
 
+# Delete room (POST)
+@router.post("/rooms/{room_id}/delete")
+async def delete_room(
+    room_id: str,
+    jwt_token: str = Cookie(None)
+):
+    if not check_auth(jwt_token):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.delete(
+                f"{ROOM_SERVICE_URL}/rooms/{room_id}",
+                headers={"Authorization": f"Bearer {jwt_token}"}
+            )
+            
+            if res.status_code not in [200, 204]:
+                try:
+                    error_detail = res.json().get("detail", "Failed to delete room")
+                except:
+                    error_detail = "Failed to delete room"
+                return RedirectResponse(
+                    url=f"/rooms?error={error_detail}",
+                    status_code=302
+                )
+            
+            return RedirectResponse(
+                url="/rooms?success=Room%20deleted%20successfully",
+                status_code=302
+            )
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/rooms?error=Error: {str(e)}",
+            status_code=302
+        )
+
 # Simulasi Absensi - Get Credential FIRST, THEN logout and redirect
 @router.get("/rooms/{room_id}/simulate-attendance")
 async def simulate_attendance(
