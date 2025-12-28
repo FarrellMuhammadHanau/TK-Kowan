@@ -641,7 +641,55 @@ curl -X POST http://3.225.88.17:8000/classes/add-attendees \
 
 ---
 
-### 4. Validate Attendee in Class
+### 4. Get Class Attendees
+
+**Endpoint:** `GET /classes/{class_id}/attendees`
+
+**Authorization:** `Bearer jwt_admin`
+
+**Description:** Retrieve the list of all students enrolled in a specific class. Fetches student details from Attendee Service.
+
+**Path Parameters:**
+- `class_id` (string) - The UUID of the class
+
+**Response:** `200 OK`
+```json
+{
+  "attendees": [
+    {
+      "code": "2206083722",
+      "name": "Cyrilus Yodha Maheswara"
+    },
+    {
+      "code": "2206081566",
+      "name": "Farrell Muhammad Hanau"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- `404 Not Found` - Class not found
+```json
+{
+  "detail": "Class not found"
+}
+```
+
+**Notes:**
+- Returns empty list if no attendees enrolled
+- Calls Attendee Service internally to get student names
+- Falls back to using codes as names if Attendee Service unavailable
+
+**Example:**
+```bash
+curl -X GET http://3.225.88.17:8000/classes/750e8400-e29b-41d4-a716-446655440000/attendees \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+---
+
+### 5. Validate Attendee in Class
 
 **Endpoint:** `POST /classes/validate-attendee`
 

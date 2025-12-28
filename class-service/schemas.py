@@ -26,6 +26,15 @@ class AddAttendeesRequest(BaseModel):
     attendees: List[dict] # Expecting [{"code": "string"}]
 
 
+# ---------- GET CLASS ATTENDEES ----------
+class AttendeeInClass(BaseModel):
+    code: str
+    name: str
+
+class GetClassAttendeesResponse(BaseModel):
+    attendees: List[AttendeeInClass]
+
+
 # ---------- VALIDATE ATTENDEE IN CLASS ----------
 class ValidateAttendeeRequest(BaseModel):
     class_id: str

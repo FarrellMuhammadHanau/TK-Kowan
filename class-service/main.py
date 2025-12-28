@@ -12,6 +12,7 @@ from schemas import (
     CreateClassesResponse,
     GetClassResponse,
     AddAttendeesRequest,
+    GetClassAttendeesResponse,
     ValidateAttendeeRequest,
     ValidateAttendeeResponse,
     ValidateClassExistenceRequest,
@@ -214,6 +215,67 @@ async def add_attendees(
 
     await db.commit()
     return {"message": "successful"}
+
+# 4b. GET ATTENDEES IN CLASS
+@app.get("/classes/{class_id}/attendees", response_model=GetClassAttendeesResponse)
+async def get_class_attendees(
+    class_id: str,
+    institution_id: str = Depends(get_institution_id),
+    token: str = Depends(get_raw_token),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify class exists
+    result = await db.execute(
+        select(Class).where(
+            Class.id == class_id,
+            Class.institution_id == institution_id
+        )
+    )
+    class_obj = result.scalar_one_or_none()
+    if not class_obj:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Get all attendee codes for this class
+    result = await db.execute(
+        select(ClassAttendee).where(
+            ClassAttendee.class_id == class_id,
+            ClassAttendee.institution_id == institution_id
+        )
+    )
+    class_attendees = result.scalars().all()
+    
+    if not class_attendees:
+        return GetClassAttendeesResponse(attendees=[])
+    
+    # Get attendee details from Attendee Service
+    attendee_codes = [ca.attendee_code for ca in class_attendees]
+    
+    attendees_with_names = []
+    async with httpx.AsyncClient() as client:
+        try:
+            # Call attendee service to get names
+            response = await client.post(
+                f"{ATTENDEE_SERVICE_URL}/attendees/validate-existence",
+                json={"attendees": [{"code": code} for code in attendee_codes]},
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            
+            if response.status_code == 200:
+                validation_data = response.json()
+                if validation_data.get("valid"):
+                    attendees_with_names = validation_data.get("attendees", [])
+                else:
+                    # If validation fails, return codes without names
+                    attendees_with_names = [{"code": code, "name": code} for code in attendee_codes]
+            else:
+                # Fallback: return codes as names
+                attendees_with_names = [{"code": code, "name": code} for code in attendee_codes]
+        except Exception as e:
+            print(f"Error fetching attendee names: {e}")
+            # Fallback: return codes as names
+            attendees_with_names = [{"code": code, "name": code} for code in attendee_codes]
+    
+    return GetClassAttendeesResponse(attendees=attendees_with_names)
 
 # 5. REMOVE ATTENDEE FROM CLASS
 @app.delete("/classes/{class_id}/attendees/{attendee_code}")
