@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Class Attendees{% endblock %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl">
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h2 class="text-2xl font-semibold">{{ class_name }}</h2>
+      <p class="text-gray-600 text-sm">Code: {{ class_code }}</p>
+    </div>
+    <div class="space-x-2">
+      <a href="/classes/{{ class_id }}/attendees/add" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        Add Attendee
+      </a>
+      <a href="/classes" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+        Back to Classes
+      </a>
+    </div>
+  </div>
+
+  {% if error %}
+  <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+    <strong>Error!</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if request.query_params.get('error') %}
+  <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+    <strong>Error!</strong> {{ request.query_params.get('error_msg', 'An error occurred') }}
+  </div>
+  {% endif %}
+
+  {% if success %}
+  <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+    <strong>Success!</strong> {{ success }}
+  </div>
+  {% endif %}
+
+  {% if request.query_params.get('success') %}
+  <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+    <strong>Success!</strong> {{ request.query_params.get('success') }}
+  </div>
+  {% endif %}
+
+  {% if attendees %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white border">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="px-4 py-2 border text-center">NPM/Code</th>
+          <th class="px-4 py-2 border text-center">Name</th>
+          <th class="px-4 py-2 border text-center">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for attendee in attendees | sort(attribute='name') %}
+        <tr>
+          <td class="px-4 py-2 border text-center font-mono">{{ attendee.code }}</td>
+          <td class="px-4 py-2 border text-center">{{ attendee.name }}</td>
+          <td class="px-4 py-2 border text-center">
+            <form method="POST" action="/classes/{{ class_id }}/attendees/remove" style="display: inline;">
+              <input type="hidden" name="attendee_code" value="{{ attendee.code }}">
+              <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700" onclick="return confirm('Remove this attendee?')">
+                Remove
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-gray-600 text-center py-8">No attendees in this class. <a href="/classes/{{ class_id }}/attendees/add" class="text-blue-600 underline">Add one</a></p>
+  {% endif %}
+</div>
+{% endblock %}
