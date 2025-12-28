@@ -9,7 +9,7 @@ AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://13.223.192.142:8000")
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-def check_auth(jwt_token: str = None):
+def check_auth(jwt_token: str | None = None):
     """Check if user is authenticated"""
     return jwt_token is not None
 

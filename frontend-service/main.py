@@ -5,6 +5,8 @@ from fastapi.templating import Jinja2Templates
 from auth import router as auth_router
 from attendee import router as attendee_router
 from room import router as room_router
+from class_service import router as class_router
+from schedule_service import router as schedule_router
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -13,8 +15,10 @@ templates = Jinja2Templates(directory="templates")
 app.include_router(auth_router)
 app.include_router(attendee_router)
 app.include_router(room_router)
+app.include_router(class_router)
+app.include_router(schedule_router)
 
-def check_auth(jwt_token: str = None):
+def check_auth(jwt_token: str | None = None):
     """Check if user is authenticated"""
     return jwt_token is not None
 

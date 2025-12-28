@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 import httpx
 import os
 
-ATTENDEE_SERVICE_URL = os.getenv("ATTENDEE_SERVICE_URL", "http://18.214.134.23:8000")
+CLASS_SERVICE_URL = os.getenv("CLASS_SERVICE_URL", "http://localhost:8000")
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -13,77 +13,73 @@ def check_auth(jwt_token: str | None = None):
     """Check if user is authenticated"""
     return jwt_token is not None
 
-@router.get("/attendees")
-async def attendees_page(request: Request, jwt_token: str = Cookie(None)):
+@router.get("/classes")
+async def classes_page(request: Request, jwt_token: str = Cookie(None)):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
-    attendees = []
+    classes = []
     error = None
     
     try:
         async with httpx.AsyncClient() as client:
             res = await client.get(
-                f"{ATTENDEE_SERVICE_URL}/attendees",
+                f"{CLASS_SERVICE_URL}/classes",
                 headers={"Authorization": f"Bearer {jwt_token}"}
             )
             
             if res.status_code == 200:
-                attendees = res.json()
+                classes = res.json()
     except Exception:
-        error = "Gagal mengambil data attendee"
+        error = "Gagal mengambil data class"
     
-    secret_code = request.query_params.get("secret_code")
-    secret_value = request.query_params.get("secret_value")
+    success = request.query_params.get("success")
+    class_name = request.query_params.get("class_name")
     
     return templates.TemplateResponse(
-        "attendees.html",
+        "classes.html",
         {
             "request": request,
-            "attendees": attendees,
+            "classes": classes,
             "error": error,
-            "secret_code": secret_code,
-            "secret_value": secret_value
+            "success": success,
+            "class_name": class_name
         }
     )
 
-@router.get("/attendees/create")
-def create_attendee_page(request: Request, jwt_token: str = Cookie(None)):
+@router.get("/classes/create")
+def create_class_page(request: Request, jwt_token: str = Cookie(None)):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
     return templates.TemplateResponse(
-        "attendee_create.html",
+        "class_create.html",
         {"request": request}
     )
 
-@router.post("/attendees/create")
-async def create_attendee_submit(
+@router.post("/classes/create")
+async def create_class_submit(
     jwt_token: str = Cookie(None),
-    code: str = Form(...),
-    name: str = Form(...)
+    name: str = Form(...),
+    grade: str = Form(...)
 ):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.post(
-                f"{ATTENDEE_SERVICE_URL}/attendees",
+                f"{CLASS_SERVICE_URL}/classes",
                 headers={"Authorization": f"Bearer {jwt_token}"},
-                json={"attendees": [{"code": code, "name": name}]}
+                json={"classes": [{"name": name, "grade": grade}]}
             )
             
             if res.status_code != 200:
-                return RedirectResponse(url="/attendees/create?error=1", status_code=302)
-            
-            data = res.json()
-            result = data[0]
-            secret = result.get("secret")
+                return RedirectResponse(url="/classes/create?error=1", status_code=302)
             
             return RedirectResponse(
-                url=f"/attendees?secret_code={code}&secret_value={secret}",
+                url=f"/classes?success=1&class_name={name}",
                 status_code=302
             )
     except Exception:
-        return RedirectResponse(url="/attendees/create?error=1", status_code=302)
+        return RedirectResponse(url="/classes/create?error=1", status_code=302)

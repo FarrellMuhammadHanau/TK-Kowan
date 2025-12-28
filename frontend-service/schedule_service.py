@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 import httpx
 import os
 
-ROOM_SERVICE_URL = os.getenv("ROOM_SERVICE_URL", "http://54.162.202.203:8000")
+SCHEDULE_SERVICE_URL = os.getenv("SCHEDULE_SERVICE_URL", "http://localhost:8000")
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -13,54 +13,58 @@ def check_auth(jwt_token: str | None = None):
     """Check if user is authenticated"""
     return jwt_token is not None
 
-@router.get("/rooms")
-async def rooms_page(request: Request, jwt_token: str = Cookie(None)):
+@router.get("/schedules")
+async def schedules_page(request: Request, jwt_token: str = Cookie(None)):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
-    rooms = []
+    schedules = []
     error = None
     
     try:
         async with httpx.AsyncClient() as client:
             res = await client.get(
-                f"{ROOM_SERVICE_URL}/rooms",
+                f"{SCHEDULE_SERVICE_URL}/schedules",
                 headers={"Authorization": f"Bearer {jwt_token}"}
             )
             
             if res.status_code == 200:
-                rooms = res.json()
+                schedules = res.json()
     except Exception:
-        error = "Gagal mengambil data room"
+        error = "Gagal mengambil data schedule"
     
     success = request.query_params.get("success")
-    room_name = request.query_params.get("room_name")
+    schedule_name = request.query_params.get("schedule_name")
     
     return templates.TemplateResponse(
-        "rooms.html",
+        "schedules.html",
         {
             "request": request,
-            "rooms": rooms,
+            "schedules": schedules,
             "error": error,
             "success": success,
-            "room_name": room_name
+            "schedule_name": schedule_name
         }
     )
 
-@router.get("/rooms/create")
-def create_room_page(request: Request, jwt_token: str = Cookie(None)):
+@router.get("/schedules/create")
+def create_schedule_page(request: Request, jwt_token: str = Cookie(None)):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
     
     return templates.TemplateResponse(
-        "room_create.html",
+        "schedule_create.html",
         {"request": request}
     )
 
-@router.post("/rooms/create")
-async def create_room_submit(
+@router.post("/schedules/create")
+async def create_schedule_submit(
     jwt_token: str = Cookie(None),
-    name: str = Form(...)
+    class_id: int = Form(...),
+    room_id: int = Form(...),
+    start_time: str = Form(...),
+    end_time: str = Form(...),
+    day_of_week: str = Form(...)
 ):
     if not check_auth(jwt_token):
         return RedirectResponse(url="/login", status_code=302)
@@ -68,17 +72,25 @@ async def create_room_submit(
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             res = await client.post(
-                f"{ROOM_SERVICE_URL}/rooms",
+                f"{SCHEDULE_SERVICE_URL}/schedules",
                 headers={"Authorization": f"Bearer {jwt_token}"},
-                json={"rooms": [{"name": name}]}
+                json={
+                    "schedules": [{
+                        "class_id": class_id,
+                        "room_id": room_id,
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "day_of_week": day_of_week
+                    }]
+                }
             )
             
             if res.status_code != 200:
-                return RedirectResponse(url="/rooms/create?error=1", status_code=302)
+                return RedirectResponse(url="/schedules/create?error=1", status_code=302)
             
             return RedirectResponse(
-                url=f"/rooms?success=1&room_name={name}",
+                url=f"/schedules?success=1&schedule_name=Schedule",
                 status_code=302
             )
     except Exception:
-        return RedirectResponse(url="/rooms/create?error=1", status_code=302)
+        return RedirectResponse(url="/schedules/create?error=1", status_code=302)
