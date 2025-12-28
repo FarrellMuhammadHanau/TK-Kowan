@@ -7,7 +7,22 @@
 
 ---
 
-## **Step 1: Build & Push Docker Image**
+## **Step 1: Build & Push Docker Image (OPTIONAL)**
+
+**PENTING:** Image untuk semua services sudah tersedia secara **public** di Docker Hub dan sudah dikonfigurasi di deployment YAML:
+
+- `farrellmuhammadhanau/auth-service:latest`
+- `farrellmuhammadhanau/attendee-service:latest`
+- `farrellmuhammadhanau/room-service:latest`
+- `yodh4/class-service:latest`
+- `yodh4/schedule-service:latest`
+- `yodh4/attendance-service:latest`
+
+**Anda dapat langsung ke Step 2** jika ingin menggunakan image yang sudah ada.
+
+---
+
+### **Jika Ingin Build Image Sendiri:**
 
 Masuk ke folder microservice yang ingin di-deploy:
 
@@ -24,8 +39,27 @@ docker push [docker-username]/[nama-service]-service:latest
 **Contoh:**
 ```bash
 cd auth-service/
-docker build -t farrellmuhammadhanau/auth-service:latest .
-docker push farrellmuhammadhanau/auth-service:latest
+docker build -t yourusername/auth-service:latest .
+docker push yourusername/auth-service:latest
+```
+
+**Kemudian update image name di deployment YAML:**
+
+Edit file `deployment/[nama-service]-service/[nama-service]-service-deployment.yaml`:
+
+```yaml
+spec:
+  containers:
+  - name: [nama-service]
+    image: yourusername/[nama-service]-service:latest  # Ganti dengan image Anda
+    imagePullPolicy: Always
+```
+
+**Atau gunakan command kubectl:**
+
+```bash
+kubectl set image deployment/[nama-service] \
+  [nama-service]=yourusername/[nama-service]-service:latest
 ```
 
 ---
